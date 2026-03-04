@@ -1,6 +1,6 @@
 # Swing Watermark 🛡️
 
-[![JitPack](https://jitpack.io/v/phonchai-first/swing-watermark.svg)](https://jitpack.io/#phonchai-first/swing-watermark)
+[![JitPack](https://jitpack.io/v/phonchaidev/swing-watermark.svg)](https://jitpack.io/#phonchaidev/swing-watermark)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A premium, high-performance tiled watermark library for Java Swing applications. Designed to prevent unauthorized screen captures while remaining non-intrusive for the user.
@@ -31,9 +31,9 @@ Add the JitPack repository and the dependency to your `pom.xml`:
 </repositories>
 
 <dependency>
-    <groupId>com.github.phonchai-first</groupId>
+    <groupId>io.github.phonchaidev</groupId>
     <artifactId>swing-watermark</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 

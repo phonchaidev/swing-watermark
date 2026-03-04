@@ -4,14 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.github.phonchai.first</groupId>
+    <groupId>io.github.phonchaidev</groupId>
     <artifactId>swing-watermark</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <packaging>jar</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>A premium, high-performance tiled watermark library for Java Swing applications.</description>
-    <url>https://github.com/phonchai-first/swing-watermark</url>
+    <url>https://github.com/phonchaidev/swing-watermark</url>
 
     <licenses>
         <license>
@@ -23,16 +23,15 @@
     <developers>
         <developer>
             <name>Phonchai Son-Sam-Rong (First)</name>
-            <email>phonchai-first@users.noreply.github.com</email>
-            <organization>phonchai-first</organization>
-            <organizationUrl>https://github.com/phonchai-first</organizationUrl>
+            <organization>SF Integrated Solution Co., Ltd.</organization>
+            <organizationUrl>https://sfis.co.th/</organizationUrl>
         </developer>
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/phonchai-first/swing-watermark.git</connection>
-        <developerConnection>scm:git:ssh://github.com:phonchai-first/swing-watermark.git</developerConnection>
-        <url>http://github.com/phonchai-first/swing-watermark/tree/main</url>
+        <connection>scm:git:git://github.com/phonchaidev/swing-watermark.git</connection>
+        <developerConnection>scm:git:ssh://github.com:phonchaidev/swing-watermark.git</developerConnection>
+        <url>http://github.com/phonchaidev/swing-watermark/tree/main</url>
     </scm>
 
     <properties>
@@ -59,6 +58,15 @@
 
     <build>
         <plugins>
+            <!-- Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <release>21</release>
+                </configuration>
+            </plugin>
             <!-- Source Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

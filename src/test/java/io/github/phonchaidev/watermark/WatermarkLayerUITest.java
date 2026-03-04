@@ -1,4 +1,4 @@
-package io.github.phonchai.first.watermark;
+package io.github.phonchaidev.watermark;
 
 import org.junit.jupiter.api.Test;
 
