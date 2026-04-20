@@ -3,85 +3,143 @@ package io.github.phonchaidev.watermark;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.AWTEventListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.awt.event.WindowEvent;
 
 /**
  * Utility class to install watermarks on Windows (JFrame, JDialog).
  * Supports per-window install, global auto-install, and runtime config
  * switching.
+ *
+ * <h3>Implementation Strategy</h3>
+ * <p>Instead of wrapping the window's {@code contentPane} with a
+ * {@link JLayer}, the watermark is added as a {@link WatermarkOverlayPanel}
+ * directly to the window's {@link JLayeredPane} at z-order
+ * {@code DRAG_LAYER + 100} (= 500).  This ensures the watermark is drawn
+ * <em>above every Swing layer</em> — including third-party modal overlays
+ * such as dj-raven {@code modal-dialog} — without interfering with their
+ * internal component hierarchy.
+ *
+ * <h3>Why the old JLayer approach failed</h3>
+ * <p>The previous implementation wrapped the {@code contentPane} with a
+ * {@code JLayer}.  The dj-raven modal-dialog renders its overlay in the
+ * {@code JLayeredPane} at {@code MODAL_LAYER} (200), which is <em>above</em>
+ * the {@code contentPane}, so the watermark was hidden behind the modal.
+ *
+ * <h3>Global mode restriction</h3>
+ * <p>The global listener only targets {@link JFrame} and {@link JDialog}.
+ * {@link JWindow} and other {@link RootPaneContainer} subtypes used
+ * internally by UI libraries (e.g. popup helpers) are intentionally excluded.
  */
 public class WatermarkInstaller {
+
+    /** Client-property key used to store the overlay on the root pane. */
+    private static final String OVERLAY_KEY = "WatermarkInstaller.overlay";
+
+    /** Client-property key used to store the resize listener on the root pane. */
+    private static final String LISTENER_KEY = "WatermarkInstaller.listener";
 
     private static AWTEventListener globalListener = null;
 
     /**
      * Installs or re-installs the watermark on a specific window.
-     * If the window already has a watermark, it will be replaced with the new
-     * config.
      *
-     * @param window The JFrame or JDialog to watermark.
+     * <p>A transparent {@link WatermarkOverlayPanel} is added to the window's
+     * {@link JLayeredPane} at z-order 500 (above {@code DRAG_LAYER}).
+     * Mouse events pass through the overlay so UI components remain fully
+     * interactive.
+     *
+     * @param window The {@link JFrame} or {@link JDialog} to watermark.
      * @param config The watermark configuration.
-     * @return The JLayer wrapping the original content.
      */
-    @SuppressWarnings("unchecked")
-    public static JLayer<JComponent> install(RootPaneContainer window, WatermarkConfig config) {
-        if (window == null)
-            return null;
+    public static void install(RootPaneContainer window, WatermarkConfig config) {
+        if (window == null) {
+            return;
+        }
 
+        JRootPane rootPane = window.getRootPane();
+        JLayeredPane layeredPane = rootPane.getLayeredPane();
         Container contentPane = window.getContentPane();
-        WatermarkLayerUI layerUI = new WatermarkLayerUI(config);
 
-        // If already wrapped in JLayer, unwrap first then re-wrap with new config
-        if (contentPane instanceof JLayer) {
-            JLayer<JComponent> existingLayer = (JLayer<JComponent>) contentPane;
-            JComponent originalContent = (JComponent) existingLayer.getView();
+        // --- Remove existing overlay and its resize listener ---
+        WatermarkOverlayPanel oldOverlay =
+                (WatermarkOverlayPanel) rootPane.getClientProperty(OVERLAY_KEY);
+        if (oldOverlay != null) {
+            layeredPane.remove(oldOverlay);
+        }
 
-            JLayer<JComponent> newLayer = new JLayer<>(originalContent, layerUI);
-            window.setContentPane(newLayer);
+        ComponentListener oldListener =
+                (ComponentListener) rootPane.getClientProperty(LISTENER_KEY);
+        if (oldListener != null) {
+            rootPane.removeComponentListener(oldListener);
+        }
 
-            if (window instanceof Window) {
-                ((Window) window).revalidate();
-                ((Window) window).repaint();
+        // --- Create new transparent overlay ---
+        WatermarkOverlayPanel overlay = new WatermarkOverlayPanel(config);
+
+        // Layer 500: above DEFAULT(0) PALETTE(100) MODAL(200) POPUP(300) DRAG(400)
+        // FlatLaf title pane sits at FRAME_CONTENT_LAYER (-30000) — still below 500,
+        // but we intentionally match contentPane bounds so the title bar is not covered.
+        layeredPane.add(overlay, Integer.valueOf(JLayeredPane.DRAG_LAYER + 100));
+
+        // Sync overlay bounds to the contentPane (which is a direct child of the
+        // JLayeredPane).  contentPane.getBounds() returns its position within the
+        // layeredPane, already excluding the FlatLaf/OS title bar at the top.
+        Runnable syncBounds = () -> {
+            overlay.setBounds(contentPane.getBounds());
+            overlay.repaint();
+        };
+
+        // invokeLater ensures the layout is fully computed before we read bounds
+        SwingUtilities.invokeLater(syncBounds);
+
+        // Re-sync on every window resize
+        ComponentListener listener = new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                syncBounds.run();
             }
-            return newLayer;
-        }
+        };
+        rootPane.addComponentListener(listener);
 
-        // Fresh install
-        JLayer<JComponent> layer = new JLayer<>((JComponent) contentPane, layerUI);
-        window.setContentPane(layer);
+        // Persist references for future reinstall/cleanup
+        rootPane.putClientProperty(OVERLAY_KEY, overlay);
+        rootPane.putClientProperty(LISTENER_KEY, listener);
 
-        if (window instanceof Window) {
-            ((Window) window).revalidate();
-            ((Window) window).repaint();
-        }
-
-        return layer;
+        layeredPane.revalidate();
+        layeredPane.repaint();
     }
 
     /**
      * Automatically installs the watermark on ALL current and FUTURE windows
      * (Enterprise Mode).
      *
+     * <p>Only {@link JFrame} and {@link JDialog} instances are targeted;
+     * internal framework windows ({@link JWindow}, etc.) are skipped to
+     * prevent interfering with third-party libraries.
+     *
      * @param config The watermark configuration to apply globally.
      */
     public static void installGlobal(WatermarkConfig config) {
-        // Install on all currently open windows
+        // Install on all currently open top-level windows
         for (Window window : Window.getWindows()) {
-            if (window instanceof RootPaneContainer) {
+            if (isTargetWindow(window)) {
                 install((RootPaneContainer) window, config);
             }
         }
 
-        // Remove old listener if exists
+        // Remove old global listener if exists
         if (globalListener != null) {
             Toolkit.getDefaultToolkit().removeAWTEventListener(globalListener);
         }
 
-        // Setup listener for future windows
+        // Listen for future windows — JFrame / JDialog only
         globalListener = event -> {
             if (event.getID() == WindowEvent.WINDOW_OPENED) {
                 Object source = event.getSource();
-                if (source instanceof RootPaneContainer) {
+                if (isTargetWindow(source)) {
                     install((RootPaneContainer) source, config);
                 }
             }
@@ -97,5 +155,17 @@ public class WatermarkInstaller {
             Toolkit.getDefaultToolkit().removeAWTEventListener(globalListener);
             globalListener = null;
         }
+    }
+
+    /**
+     * Returns {@code true} only for top-level user windows that are safe to
+     * watermark ({@link JFrame} or {@link JDialog}).
+     *
+     * <p>{@link JWindow} and other {@link RootPaneContainer} subtypes are
+     * excluded because third-party UI libraries (e.g. dj-raven modal-dialog)
+     * use them as overlay containers whose structure must not be altered.
+     */
+    private static boolean isTargetWindow(Object source) {
+        return source instanceof JFrame || source instanceof JDialog;
     }
 }

@@ -1,5 +1,8 @@
 package io.github.phonchaidev.watermark;
 
+import raven.modal.ModalDialog;
+import raven.modal.component.SimpleModalBorder;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -15,8 +18,9 @@ public class MainApplication {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
+            // Use FlatLaf as required by modal-dialog
             try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                com.formdev.flatlaf.FlatLightLaf.setup();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -65,7 +69,7 @@ public class MainApplication {
             mainPanel.add(header, BorderLayout.NORTH);
 
             // Buttons
-            JPanel content = new JPanel(new GridLayout(1, 3, 15, 15));
+            JPanel content = new JPanel(new GridLayout(2, 2, 15, 15));
             content.setBackground(Color.WHITE);
             content.setBorder(BorderFactory.createEmptyBorder(40, 30, 40, 30));
 
@@ -115,6 +119,49 @@ public class MainApplication {
             content.add(dialogBtn);
             content.add(logoBtn);
             content.add(toggleBtn);
+
+            // Button 4: Open dj-raven ModalDialog (test watermark in modal)
+            JButton modalBtn = new JButton(
+                    "<html><center>🪟 ModalDialog<br><small>dj-raven test</small></center></html>");
+            modalBtn.setFont(new Font("SansSerif", Font.BOLD, 15));
+            modalBtn.setBackground(new Color(60, 120, 80));
+            modalBtn.setForeground(Color.WHITE);
+            modalBtn.setOpaque(true);
+            modalBtn.addActionListener(e -> {
+                // Content panel inside the modal
+                JPanel modalContent = new JPanel(new BorderLayout(10, 10));
+                modalContent.setBackground(Color.WHITE);
+                modalContent.setPreferredSize(new Dimension(420, 200));
+
+                JLabel info = new JLabel(
+                        "<html><center><b>ModalDialog (dj-raven)</b><br><br>"
+                                + "ถ้าลายน้ำปรากฏที่นี่ = ✅ WatermarkInstaller ทำงานได้<br>"
+                                + "ถ้าไม่ปรากฏ = ❌ modal layer บัง JLayer watermark"
+                                + "</center></html>",
+                        SwingConstants.CENTER);
+                modalContent.add(info, BorderLayout.CENTER);
+
+                JLabel hint = new JLabel(
+                        "<html><center><small>modal-dialog v2.6.1 — SimpleModalBorder</small></center></html>",
+                        SwingConstants.CENTER);
+                hint.setForeground(Color.GRAY);
+                modalContent.add(hint, BorderLayout.SOUTH);
+
+                ModalDialog.showModal(frame,
+                        new SimpleModalBorder(
+                                modalContent,
+                                "ทดสอบ Watermark ใน Modal (dj-raven)",
+                                SimpleModalBorder.OK_OPTION,
+                                // ตรวจ action ก่อน: library จะเรียก callback ด้วย OPENED ตอนเปิด
+                                // ถ้าไม่ check จะปิด modal ทันที
+                                (controller, action) -> {
+                                    if (action == SimpleModalBorder.OK_OPTION) {
+                                        controller.close();
+                                    }
+                                }),
+                        "watermark-modal-test");
+            });
+            content.add(modalBtn);
             mainPanel.add(content, BorderLayout.CENTER);
 
             frame.setContentPane(mainPanel);

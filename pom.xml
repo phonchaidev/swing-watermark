@@ -6,7 +6,7 @@
 
     <groupId>io.github.phonchaidev</groupId>
     <artifactId>swing-watermark</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <packaging>jar</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -42,6 +42,20 @@
     </properties>
 
     <dependencies>
+        <!-- Modal Dialog Library (dj-raven) — demo only, not required by the library itself -->
+        <dependency>
+            <groupId>io.github.dj-raven</groupId>
+            <artifactId>modal-dialog</artifactId>
+            <version>2.6.1</version>
+            <optional>true</optional>
+        </dependency>
+        <!-- FlatLaf — demo only (used by MainApplication + modal-dialog demo) -->
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>3.5.4</version>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -100,6 +114,15 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.3</version>
+            </plugin>
+            <!-- Exec Plugin for running demo -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>io.github.phonchaidev.watermark.MainApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>
